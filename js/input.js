@@ -8,19 +8,22 @@ export default class InputHandler {
         this.mouseY = 0;
 
         window.addEventListener('keydown', (e) => {
-            const validKeys = ['d', 'ArrowRight', 'a', 'ArrowLeft', 'w', 'ArrowUp', 's', 'ArrowDown', ' ', 'f'];
+            // Replaced 'f' with ' ' (Spacebar), added 'Shift'
+            const validKeys = ['d', 'ArrowRight', 'a', 'ArrowLeft', 'w', 'ArrowUp', 's', 'ArrowDown', ' ', 'Shift'];
             if (validKeys.includes(e.key) && this.keys.indexOf(e.key) === -1) {
                 this.keys.push(e.key);
             }
-            if (e.key === 'f') this.attackPressed = true;
+            // Attack is now Spacebar
+            if (e.key === ' ') this.attackPressed = true;
         });
 
         window.addEventListener('keyup', (e) => {
-            const validKeys = ['d', 'ArrowRight', 'a', 'ArrowLeft', 'w', 'ArrowUp', 's', 'ArrowDown', ' ', 'f'];
+            const validKeys = ['d', 'ArrowRight', 'a', 'ArrowLeft', 'w', 'ArrowUp', 's', 'ArrowDown', ' ', 'Shift'];
             if (validKeys.includes(e.key)) {
                 this.keys.splice(this.keys.indexOf(e.key), 1);
             }
-            if (e.key === 'f') this.attackPressed = false;
+            // Attack is now Spacebar
+            if (e.key === ' ') this.attackPressed = false;
         });
 
         window.addEventListener('mousedown', (e) => {

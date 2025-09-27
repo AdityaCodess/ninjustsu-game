@@ -6,7 +6,6 @@ export default class Enemy {
         this.height = 100;
         this.color = 'brown';
 
-        // --- UPDATED: HEALTH SYSTEM ---
         this.maxHealth = 100;
         this.health = this.maxHealth;
         this.markedForDeletion = false;
@@ -17,12 +16,15 @@ export default class Enemy {
     }
 
     takeDamage(amount) {
+        // --- DEBUGGING: Log every time damage is taken ---
+        console.log(`DAMAGE! Amount: ${amount}. Health before: ${this.health}. New health: ${this.health - amount}`);
+
         this.isHit = true;
         this.hitTimer = this.hitDuration;
         this.health -= amount;
 
         if (this.health <= 0) {
-            this.health = 0; // Prevent health from going negative
+            this.health = 0;
             this.markedForDeletion = true;
         }
     }
@@ -36,7 +38,6 @@ export default class Enemy {
     }
 
     draw(context) {
-        // Draw the enemy's body
         if (this.isHit) {
             context.fillStyle = 'red';
         } else {
@@ -44,23 +45,17 @@ export default class Enemy {
         }
         context.fillRect(this.x, this.y, this.width, this.height);
 
-        // --- NEW: DRAW HEALTH BAR ---
-        // Only draw the health bar if the enemy has taken damage
         if (this.health < this.maxHealth) {
             const healthBarHeight = 10;
             const healthBarWidth = this.width;
             const healthBarX = this.x;
-            const healthBarY = this.y - healthBarHeight - 5; // Position 5px above the enemy
+            const healthBarY = this.y - healthBarHeight - 5;
 
-            // Draw the background of the health bar (red)
-            context.fillStyle = '#c0392b'; // A dark red
+            context.fillStyle = '#c0392b';
             context.fillRect(healthBarX, healthBarY, healthBarWidth, healthBarHeight);
 
-            // Calculate the width of the current health
             const currentHealthWidth = (this.health / this.maxHealth) * healthBarWidth;
-
-            // Draw the foreground of the health bar (green)
-            context.fillStyle = '#2ecc71'; // A bright green
+            context.fillStyle = '#2ecc71';
             context.fillRect(healthBarX, healthBarY, currentHealthWidth, healthBarHeight);
         }
     }

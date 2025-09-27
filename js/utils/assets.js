@@ -1,17 +1,14 @@
-// This function now loads both the idle sprite and the run animation frames.
-export function loadPlayerSprite() {
-    // Promise for the idle image
-    const idlePromise = new Promise((resolve, reject) => {
-        const idleImage = new Image();
-        idleImage.src = 'assets/sprites/player/player_idle.png';
-        idleImage.onload = () => resolve(idleImage);
-        idleImage.onerror = () => reject(new Error("Could not load player idle sprite"));
+export function loadAssets() {
+    // Player assets
+    const playerIdlePromise = new Promise((resolve, reject) => {
+        const image = new Image();
+        image.src = 'assets/sprites/player/player_idle.png';
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("Could not load player idle sprite"));
     });
 
-    // Promises for the run animation frames
-    const runPromises = [];
-    const frameCount = 10;
-    for (let i = 0; i < frameCount; i++) {
+    const playerRunPromises = [];
+    for (let i = 0; i < 10; i++) {
         const promise = new Promise((resolve, reject) => {
             const image = new Image();
             const frameNumber = String(i).padStart(2, '0');
@@ -19,13 +16,56 @@ export function loadPlayerSprite() {
             image.onload = () => resolve(image);
             image.onerror = () => reject(new Error(`Could not load frame player_run_${frameNumber}.png`));
         });
-        runPromises.push(promise);
+        playerRunPromises.push(promise);
     }
-
-    // Wait for all promises to resolve
-    return Promise.all([idlePromise, Promise.all(runPromises)])
-        .then(([idle, run]) => {
-            // Return the loaded assets as a structured object
-            return { idle, run };
+    
+    const playerAttackPromises = [];
+    for (let i = 0; i < 6; i++) {
+        const promise = new Promise((resolve, reject) => {
+            const image = new Image();
+            const frameNumber = String(i).padStart(2, '0');
+            image.src = `assets/sprites/player/attack_anim/player_attack_${frameNumber}.png`;
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error(`Could not load frame player_attack_${frameNumber}.png`));
         });
+        playerAttackPromises.push(promise);
+    }
+    
+    // Enemy assets
+    const oniBrutePromise = new Promise((resolve, reject) => {
+        const image = new Image();
+        image.src = 'assets/sprites/enemies/oni_brute.png';
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("Could not load oni brute sprite"));
+    });
+
+    // UPDATED: Only load the slime's single grid spritesheet
+    const fireSlimeSheetPromise = new Promise((resolve, reject) => {
+        const image = new Image();
+        image.src = 'assets/sprites/enemies/fire_slime_idle_sheet.png';
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("Could not load fire slime idle sheet"));
+    });
+
+    // Combine all promises
+    return Promise.all([
+        playerIdlePromise,
+        Promise.all(playerRunPromises),
+        Promise.all(playerAttackPromises),
+        oniBrutePromise,
+        fireSlimeSheetPromise
+    ]).then(([playerIdle, playerRun, playerAttack, oniBrute, fireSlimeSheet]) => {
+        // Return all loaded assets as a structured object
+        return {
+            player: {
+                idle: playerIdle,
+                run: playerRun,
+                attack: playerAttack,
+            },
+            enemies: {
+                oniBrute: oniBrute,
+                fireSlimeSheet: fireSlimeSheet
+            }
+        };
+    });
 }

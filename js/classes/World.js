@@ -4,7 +4,6 @@ export default class World {
         this.height = height;
         this.color = '#3a3a3a';
 
-        // --- NEW: ADD SCENERY ---
         // Create an array to hold some simple background objects
         this.scenery = [];
         for (let i = 0; i < 50; i++) {
@@ -21,7 +20,6 @@ export default class World {
         context.fillStyle = this.color;
         context.fillRect(0, 0, this.width, this.height);
 
-        // --- NEW: DRAW THE SCENERY ---
         // Loop through the scenery objects and draw them
         context.fillStyle = 'white';
         this.scenery.forEach(item => {
