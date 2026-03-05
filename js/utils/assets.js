@@ -39,12 +39,19 @@ export function loadAssets() {
         image.onerror = () => reject(new Error("Could not load oni brute sprite"));
     });
 
-    // UPDATED: Only load the slime's single grid spritesheet
     const fireSlimeSheetPromise = new Promise((resolve, reject) => {
         const image = new Image();
         image.src = 'assets/sprites/enemies/fire_slime_idle_sheet.png';
         image.onload = () => resolve(image);
         image.onerror = () => reject(new Error("Could not load fire slime idle sheet"));
+    });
+    
+    // Shuriken asset (now considered a player asset)
+    const shurikenPromise = new Promise((resolve, reject) => {
+        const image = new Image();
+        image.src = 'assets/sprites/fx/shuriken.png';
+        image.onload = () => resolve(image);
+        image.onerror = () => reject(new Error("Could not load shuriken sprite"));
     });
 
     // Combine all promises
@@ -53,14 +60,16 @@ export function loadAssets() {
         Promise.all(playerRunPromises),
         Promise.all(playerAttackPromises),
         oniBrutePromise,
-        fireSlimeSheetPromise
-    ]).then(([playerIdle, playerRun, playerAttack, oniBrute, fireSlimeSheet]) => {
+        fireSlimeSheetPromise,
+        shurikenPromise
+    ]).then(([playerIdle, playerRun, playerAttack, oniBrute, fireSlimeSheet, shuriken]) => {
         // Return all loaded assets as a structured object
         return {
             player: {
                 idle: playerIdle,
                 run: playerRun,
                 attack: playerAttack,
+                shuriken: shuriken // The shuriken is now part of the player asset object
             },
             enemies: {
                 oniBrute: oniBrute,

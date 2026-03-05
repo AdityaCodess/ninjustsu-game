@@ -98,4 +98,4 @@ export default class FireSlime extends Enemy {
             context.fillRect(healthBarX, healthBarY, currentHealthWidth, healthBarHeight);
         }
     }
-}
+}   

@@ -1,3 +1,5 @@
+import Projectile from './Projectile.js';
+
 export default class Player {
     constructor(gameWidth, gameHeight, playerAssets) {
         this.worldWidth = gameWidth;
@@ -6,6 +8,7 @@ export default class Player {
         this.idleImage = playerAssets.idle;
         this.runImages = playerAssets.run;
         this.attackImages = playerAssets.attack;
+        this.shurikenImage = playerAssets.shuriken;
         this.image = this.idleImage;
 
         this.states = {
@@ -39,7 +42,6 @@ export default class Player {
         this.lastMoveX = 1;
         this.lastMoveY = 0;
         
-        this.isDashing = false;
         this.dashSpeed = 2;
         this.dashDuration = 150;
         this.dashCooldown = 1000;
@@ -49,7 +51,7 @@ export default class Player {
         this.attackCooldown = 800;
         this.attackCooldownTimer = 0;
         this.attackRange = 250;
-        this.attackDamage = 20; // TUNED: Increased from 5 to 20
+        this.attackDamage = 20;
         this.attackTarget = null;
         this.originalPosition = { x: 0, y: 0 };
         this.damageDealt = false;
@@ -57,20 +59,22 @@ export default class Player {
         this.maxHealth = 200;
         this.health = this.maxHealth;
 
-        this.isParrying = false;
         this.parryDuration = 250;
         this.parryCooldown = 1500;
         this.parryTimer = 0;
         this.parryCooldownTimer = 0;
 
-        // --- NEW: INVINCIBILITY PROPERTIES ---
         this.isInvincible = false;
-        this.invincibilityDuration = 1000; // 1 second of invincibility
+        this.invincibilityDuration = 1000;
         this.invincibilityTimer = 0;
+
+        this.maxShurikens = 10;
+        this.shurikenCount = this.maxShurikens;
+        this.shurikenCooldown = 300;
+        this.shurikenCooldownTimer = 0;
     }
     
     takeDamage(amount) {
-        // Can't take damage if invincible
         if (this.isInvincible) return;
 
         this.health -= amount;
@@ -82,20 +86,20 @@ export default class Player {
         }
     }
 
-    update(input, deltaTime, camera, enemies) {
+    update(input, deltaTime, camera, enemies, projectiles) {
         // Timers
         if (this.dashCooldownTimer > 0) this.dashCooldownTimer -= deltaTime;
         if (this.attackCooldownTimer > 0) this.attackCooldownTimer -= deltaTime;
         if (this.parryCooldownTimer > 0) this.parryCooldownTimer -= deltaTime;
+        if (this.shurikenCooldownTimer > 0) this.shurikenCooldownTimer -= deltaTime;
         
-        // NEW: Invincibility timer
         if (this.invincibilityTimer > 0) {
             this.invincibilityTimer -= deltaTime;
         } else {
             this.isInvincible = false;
         }
 
-        this.handleInput(input, enemies);
+        this.handleInput(input, enemies, projectiles, camera);
         
         switch (this.state) {
             case this.states.IDLE:
@@ -162,10 +166,29 @@ export default class Player {
         if (this.y + this.height > this.worldHeight) this.y = this.worldHeight - this.height;
     }
 
-    handleInput(input, enemies) {
-        if (this.state === this.states.ATTACK_LUNGE || this.state === this.states.ATTACK_STRIKE || this.state === this.states.ATTACK_RETURN || this.state === this.states.DASHING) return;
+    handleInput(input, enemies, projectiles, camera) {
+        const busyStates = [
+            this.states.ATTACK_LUNGE,
+            this.states.ATTACK_STRIKE,
+            this.states.ATTACK_RETURN,
+            this.states.DASHING
+        ];
+        if (busyStates.includes(this.state)) return;
 
-        if (input.parryPressed && this.parryCooldownTimer <= 0) {
+        if (input.throwPressed && this.shurikenCooldownTimer <= 0 && this.shurikenCount > 0) {
+            this.shurikenCooldownTimer = this.shurikenCooldown;
+            this.shurikenCount--;
+            const mouseWorldX = input.mouseX + camera.x;
+            const mouseWorldY = input.mouseY + camera.y;
+            const playerCenterX = this.x + this.width / 2;
+            const playerCenterY = this.y + this.height / 2;
+            const dx = mouseWorldX - playerCenterX;
+            const dy = mouseWorldY - playerCenterY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            projectiles.push(new Projectile(playerCenterX, playerCenterY, dx / distance, dy / distance, this.shurikenImage));
+            input.throwPressed = false;
+        }
+        else if (input.parryPressed && this.parryCooldownTimer <= 0) {
             this.state = this.states.PARRYING;
             this.parryTimer = this.parryDuration;
             this.parryCooldownTimer = this.parryCooldown;
@@ -181,36 +204,53 @@ export default class Player {
                 this.lastMoveX = (closestEnemy.x > this.x) ? 1 : -1;
             }
         }
-        else if (input.keys.includes('Shift') && this.dashCooldownTimer <= 0) {
+        else if (input.keys.has('ShiftLeft') && this.dashCooldownTimer <= 0) {
             this.state = this.states.DASHING;
             this.dashTimer = this.dashDuration;
             this.dashCooldownTimer = this.dashCooldown;
         }
-        else if (input.keys.some(key => ['w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(key))) {
-            this.state = this.states.RUNNING;
-        } else {
-            this.state = this.states.IDLE;
+        else {
+            let isMoving = false;
+            const movementCodes = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+            for (const code of input.keys) {
+                if (movementCodes.includes(code)) {
+                    isMoving = true;
+                    break;
+                }
+            }
+
+            if (isMoving) {
+                this.state = this.states.RUNNING;
+            } else {
+                this.state = this.states.IDLE;
+            }
         }
         input.attackPressed = false;
     }
 
     handleMovement(input, deltaTime) {
         const currentSpeed = this.speed * deltaTime;
-        this.isMoving = false;
         let moveX = 0;
         let moveY = 0;
-        if (input.keys.includes('d') || input.keys.includes('ArrowRight')) moveX = 1;
-        else if (input.keys.includes('a') || input.keys.includes('ArrowLeft')) moveX = -1;
-        if (input.keys.includes('w') || input.keys.includes('ArrowUp')) moveY = -1;
-        else if (input.keys.includes('s') || input.keys.includes('ArrowDown')) moveY = 1;
+        
+        if (input.keys.has('KeyW') || input.keys.has('ArrowUp')) moveY = -1;
+        if (input.keys.has('KeyS') || input.keys.has('ArrowDown')) moveY = 1;
+        if (input.keys.has('KeyA') || input.keys.has('ArrowLeft')) moveX = -1;
+        if (input.keys.has('KeyD') || input.keys.has('ArrowRight')) moveX = 1;
 
         if (moveX !== 0 || moveY !== 0) {
             this.isMoving = true;
             if (moveX !== 0) this.lastMoveX = moveX;
-            this.lastMoveY = moveY;
+            if (moveY !== 0) this.lastMoveY = moveY;
+
+            const magnitude = Math.sqrt(moveX * moveX + moveY * moveY);
+            if (magnitude > 0) {
+                this.x += (moveX / magnitude) * currentSpeed;
+                this.y += (moveY / magnitude) * currentSpeed;
+            }
+        } else {
+            this.isMoving = false;
         }
-        this.x += moveX * currentSpeed;
-        this.y += moveY * currentSpeed;
     }
 
     findClosestEnemy(enemies) {
@@ -269,7 +309,6 @@ export default class Player {
             context.fill();
         }
 
-        // NEW: Invincibility Flash
         if (this.isInvincible) {
             context.save();
             context.globalAlpha = 0.5;
@@ -284,7 +323,6 @@ export default class Player {
             context.drawImage(this.image, this.x, this.y, this.width, this.height);
         }
 
-        // NEW: Restore context after drawing if invincible
         if (this.isInvincible) {
             context.restore();
         }
